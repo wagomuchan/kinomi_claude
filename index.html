@@ -39,6 +39,7 @@
           デバッグ：<input id="debugStartInput" type="number" min="0" max="9999" value="0" inputmode="numeric"> 個から
         </label>
         <button id="startBtn" class="btn" type="button">はじめる</button>
+        <button id="skipBtn" class="btn skip" type="button" hidden>100こから はじめる</button>
         <p class="best">ベスト <span id="titleBest">0</span></p>
       </div>
     </section>
@@ -49,8 +50,10 @@
         <p class="result-label">あげた かず</p>
         <p class="result-score"><span id="resultScore">0</span></p>
         <p id="newBest" class="new-best" hidden>ベスト こうしん！</p>
+        <p id="unlockMsg" class="unlock-msg" hidden>100こ たっせい！<br>つぎから 100こから はじめられるよ</p>
         <p class="best">ベスト <span id="resultBest">0</span></p>
         <button id="retryBtn" class="btn" type="button">もういちど</button>
+        <button id="retrySkipBtn" class="btn skip" type="button" hidden>100こから もういちど</button>
         <button id="toTitleBtn" class="btn sub" type="button">タイトルへ</button>
       </div>
     </section>

@@ -21,6 +21,7 @@ const DIFFICULTY = {
   spawnDelay: [0.5, 1.3], // つぎのどうぶつが来るまでの秒数
 };
 const LIVES = 3;
+const SKIP_AT = 100;   // 一度この数までいくと、つぎからこの数から始められる
 /* ===================================================== */
 
 // URLに ?debug を付けたときだけ、好きな個数から始められる（タイトル画面に入力欄が出る）
@@ -53,6 +54,8 @@ const S = {
   lives: LIVES,
   combo: 0,
   best: Number(load('kinomi.best', '0')) || 0,
+  skipUnlocked: false,
+  justUnlocked: false,
   slots: [null, null, null],
   spawnTimer: 0,
   overTimer: 0,
@@ -193,12 +196,14 @@ function debugStartScore() {
   return Number.isFinite(n) ? Math.max(0, Math.min(9999, n)) : 0;
 }
 
-function startGame() {
+// from: 何個から始めるか（「100こから はじめる」ボタンのとき）。省略するとデバッグ入力か0
+function startGame(from = null) {
   sound.unlock();
-  const startScore = debugStartScore();
+  const startScore = from ?? debugStartScore();
   Object.assign(S, {
     mode: 'play', paused: false, score: startScore, lives: LIVES, combo: 0,
-    debugRun: startScore > 0,
+    debugRun: from === null && startScore > 0,
+    justUnlocked: false,
     slots: [null, null, null], spawnTimer: 0.6, overTimer: 0,
     held: null, flying: [], particles: [], texts: [],
   });
@@ -218,6 +223,7 @@ function endGame() {
   document.getElementById('resultScore').textContent = S.score;
   document.getElementById('resultBest').textContent = S.best;
   document.getElementById('newBest').hidden = !(isBest && S.score > 0);
+  document.getElementById('unlockMsg').hidden = !S.justUnlocked;
   updateTitleBest();
   show('result');
 }
@@ -228,6 +234,12 @@ function feed(c, type, x, y) {
     c.t = 0;
     S.score++;
     S.combo++;
+    if (!S.debugRun && !S.skipUnlocked && S.score >= SKIP_AT) {
+      S.skipUnlocked = true;
+      S.justUnlocked = true;
+      save('kinomi.skip100', '1');
+      S.texts.push({ text: `${SKIP_AT}こ たっせい！`, x: W / 2, y: L.cy + 160, t: 0, dur: 2.2, color: '#d98a1a', size: 34 });
+    }
     sound.correct(S.combo);
     S.flying.push({ type, x0: x, y0: y, x1: SLOT_X[c.slot], y1: L.animalY, t: 0, dur: 0.14, kind: 'eat' });
     for (let i = 0; i < 6; i++) {
@@ -633,6 +645,8 @@ function show(name) {
 
 function updateTitleBest() {
   document.getElementById('titleBest').textContent = S.best;
+  document.getElementById('skipBtn').hidden = !S.skipUnlocked;
+  document.getElementById('retrySkipBtn').hidden = !S.skipUnlocked;
 }
 
 function drawTitleArt() {
@@ -661,8 +675,10 @@ soundBtn.addEventListener('click', () => {
   updateSoundBtn();
 });
 
-document.getElementById('startBtn').addEventListener('click', startGame);
-document.getElementById('retryBtn').addEventListener('click', startGame);
+document.getElementById('startBtn').addEventListener('click', () => startGame());
+document.getElementById('retryBtn').addEventListener('click', () => startGame());
+document.getElementById('skipBtn').addEventListener('click', () => startGame(SKIP_AT));
+document.getElementById('retrySkipBtn').addEventListener('click', () => startGame(SKIP_AT));
 document.getElementById('toTitleBtn').addEventListener('click', () => {
   S.mode = 'title';
   S.slots = [null, null, null];
@@ -699,6 +715,7 @@ async function init() {
       new Promise(r => setTimeout(r, 1500)),
     ]);
   } catch { /* フォントが使えなくても遊べる */ }
+  S.skipUnlocked = load('kinomi.skip100', '0') === '1' || S.best >= SKIP_AT;
   resize();
   updateTitleBest();
   updateSoundBtn();

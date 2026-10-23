@@ -154,6 +154,22 @@ body.ready #stage { opacity: 1; }
   box-shadow: 1px 1px 0 rgba(74, 51, 38, 0.3);
 }
 
+.btn[hidden] { display: none; }
+
+.btn.skip {
+  background: #f7b98a;
+  font-size: calc(19 * var(--u));
+}
+
+.unlock-msg {
+  margin: calc(4 * var(--u)) 0 0;
+  font-size: calc(16 * var(--u));
+  line-height: 1.4;
+  color: #c96a1a;
+}
+
+.unlock-msg[hidden] { display: none; }
+
 .btn.sub {
   background: #cfe4ad;
   font-size: calc(19 * var(--u));
