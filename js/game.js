@@ -6,9 +6,12 @@ import { load, save } from './storage.js';
 
 /* ================= 難しさの調整はここ ================= */
 const DIFFICULTY = {
-  startPatience: 7.0,   // 最初のどうぶつが待ってくれる秒数
-  decay: 0.965,         // 1回あげるごとに待てる時間にかける倍率（小さいほど早く難しくなる）
-  minPatience: 1.7,     // 待てる時間の下限（秒）
+  // 待てる時間は「最初の秒数」から、あげた数が limitAt に届くまでに「下限」まで縮む。
+  // 0個:6.0秒 → 30個:4.2秒 → 70個:2.5秒 → 100個:1.5秒 → 120個〜:0.8秒
+  startPatience: 6.0,   // 最初のどうぶつが待ってくれる秒数
+  minPatience: 0.8,     // 待てる時間の下限（秒）
+  limitAt: 120,         // 何個あげたら下限に届くか（小さいほど早く難しくなる）
+  curve: 0.75,          // 1より小さいと序盤に早めに縮み、終盤はゆるやかになる
   randomness: 0.1,      // 待てる時間のばらつき（±10%）
   // あげた数がこの数をこえると、同時に来るどうぶつが増える
   crowd: [[0, 1], [5, 2], [15, 3]],
@@ -136,7 +139,8 @@ function resize() {
 
 function patienceFor(score) {
   const d = DIFFICULTY;
-  const base = Math.max(d.minPatience, d.startPatience * Math.pow(d.decay, score));
+  const k = Math.pow(Math.min(1, score / d.limitAt), d.curve);
+  const base = d.startPatience - (d.startPatience - d.minPatience) * k;
   return base * (1 + (Math.random() * 2 - 1) * d.randomness);
 }
 
