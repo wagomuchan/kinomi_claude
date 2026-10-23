@@ -8,10 +8,13 @@ import { load, save } from './storage.js';
 const DIFFICULTY = {
   // 待てる時間は、1個あげるごとに少しずつ短くなる（下限なし）。
   // 縮む割合は最初 shrinkRate で、あげた数が easeAfter に届くころ半分になり、だんだんゆるやかになる。
-  // 0個:6.0秒 → 30個:3.8秒 → 60個:2.6秒 → 100個:1.6秒 → 150個:0.9秒 → 200個:0.55秒 → 300個:0.23秒
+  // lateFrom をこえると、縮み方がさらにゆるやかになっていく（つなぎ目でガクッと変わらないようにしてある）。
+  // 0個:6.0秒 → 60個:2.6秒 → 100個:1.6秒 → 130個:1.1秒 → 200個:0.64秒 → 300個:0.41秒 → 400個:0.31秒
   startPatience: 6.0,   // 最初のどうぶつが待ってくれる秒数
   shrinkRate: 0.0156,   // 最初のころ、1個ごとに縮む割合（大きいほど早く難しくなる）
   easeAfter: 300,       // 縮む割合が半分になる個数（大きいほど後半もきびしいまま）
+  lateFrom: 130,        // ここから先は、縮み方をさらにゆるめる
+  lateEaseAfter: 80,    // lateFrom からこの個数あげると、縮む割合が半分になる（小さいほどゆるやか）
   randomness: 0.1,      // 待てる時間のばらつき（±10%）
   // あげた数がこの数をこえると、同時に来るどうぶつが増える
   crowd: [[0, 1], [5, 2], [15, 3]],
@@ -142,7 +145,11 @@ function resize() {
 
 function basePatience(score) {
   const d = DIFFICULTY;
-  return d.startPatience * Math.pow(1 + score / d.easeAfter, -d.shrinkRate * d.easeAfter);
+  const early = n => d.startPatience * Math.pow(1 + n / d.easeAfter, -d.shrinkRate * d.easeAfter);
+  if (score <= d.lateFrom) return early(score);
+  // lateFrom での縮む割合から始めて、そこから先はより早く割合が下がっていく
+  const rate = (d.shrinkRate * d.easeAfter) / (d.easeAfter + d.lateFrom);
+  return early(d.lateFrom) * Math.pow(1 + (score - d.lateFrom) / d.lateEaseAfter, -rate * d.lateEaseAfter);
 }
 
 function patienceFor(score) {
