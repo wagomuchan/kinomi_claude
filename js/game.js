@@ -6,14 +6,12 @@ import { load, save } from './storage.js';
 
 /* ================= 難しさの調整はここ ================= */
 const DIFFICULTY = {
-  // 待てる時間は「最初の秒数」から、あげた数が checkpoint に届くまでに checkpointPatience まで縮む。
-  // そのあとも下限なしで、1個ごとに afterDecay 倍ずつ縮み続ける。
-  // 0個:6.0秒 → 30個:4.2秒 → 70個:2.5秒 → 100個:1.5秒 → 120個:0.8秒 → 150個:0.69秒 → 200個:0.54秒 → 300個:0.32秒
-  startPatience: 6.0,      // 最初のどうぶつが待ってくれる秒数
-  checkpoint: 120,         // ここまでの縮み方を決める区切り（小さいほど早く難しくなる）
-  checkpointPatience: 0.8, // checkpoint 個あげたときの待てる秒数
-  curve: 0.75,             // 1より小さいと序盤に早めに縮み、終盤はゆるやかになる
-  afterDecay: 0.995,       // checkpoint をこえたあと、1個ごとにかける倍率
+  // 待てる時間は、1個あげるごとに少しずつ短くなる（下限なし）。
+  // 縮む割合は最初 shrinkRate で、あげた数が easeAfter に届くころ半分になり、だんだんゆるやかになる。
+  // 0個:6.0秒 → 30個:3.8秒 → 60個:2.6秒 → 100個:1.6秒 → 150個:0.9秒 → 200個:0.55秒 → 300個:0.23秒
+  startPatience: 6.0,   // 最初のどうぶつが待ってくれる秒数
+  shrinkRate: 0.0156,   // 最初のころ、1個ごとに縮む割合（大きいほど早く難しくなる）
+  easeAfter: 300,       // 縮む割合が半分になる個数（大きいほど後半もきびしいまま）
   randomness: 0.1,      // 待てる時間のばらつき（±10%）
   // あげた数がこの数をこえると、同時に来るどうぶつが増える
   crowd: [[0, 1], [5, 2], [15, 3]],
@@ -141,13 +139,7 @@ function resize() {
 
 function patienceFor(score) {
   const d = DIFFICULTY;
-  let base;
-  if (score <= d.checkpoint) {
-    const k = Math.pow(score / d.checkpoint, d.curve);
-    base = d.startPatience - (d.startPatience - d.checkpointPatience) * k;
-  } else {
-    base = d.checkpointPatience * Math.pow(d.afterDecay, score - d.checkpoint);
-  }
+  const base = d.startPatience * Math.pow(1 + score / d.easeAfter, -d.shrinkRate * d.easeAfter);
   return base * (1 + (Math.random() * 2 - 1) * d.randomness);
 }
 
