@@ -20,6 +20,9 @@ const DIFFICULTY = {
 const LIVES = 3;
 /* ===================================================== */
 
+// URLに ?debug を付けたときだけ、好きな個数から始められる（タイトル画面に入力欄が出る）
+const DEBUG = new URLSearchParams(location.search).has('debug');
+
 const W = 400;
 const SLOT_X = [72, 200, 328];
 const ARRIVE_TIME = 0.35;
@@ -137,10 +140,13 @@ function resize() {
 
 /* ---------------- ゲームの進行 ---------------- */
 
-function patienceFor(score) {
+function basePatience(score) {
   const d = DIFFICULTY;
-  const base = d.startPatience * Math.pow(1 + score / d.easeAfter, -d.shrinkRate * d.easeAfter);
-  return base * (1 + (Math.random() * 2 - 1) * d.randomness);
+  return d.startPatience * Math.pow(1 + score / d.easeAfter, -d.shrinkRate * d.easeAfter);
+}
+
+function patienceFor(score) {
+  return basePatience(score) * (1 + (Math.random() * 2 - 1) * DIFFICULTY.randomness);
 }
 
 function crowdFor(score) {
@@ -174,10 +180,18 @@ function spawn() {
   };
 }
 
+function debugStartScore() {
+  if (!DEBUG) return 0;
+  const n = parseInt(document.getElementById('debugStartInput').value, 10);
+  return Number.isFinite(n) ? Math.max(0, Math.min(9999, n)) : 0;
+}
+
 function startGame() {
   sound.unlock();
+  const startScore = debugStartScore();
   Object.assign(S, {
-    mode: 'play', paused: false, score: 0, lives: LIVES, combo: 0,
+    mode: 'play', paused: false, score: startScore, lives: LIVES, combo: 0,
+    debugRun: startScore > 0,
     slots: [null, null, null], spawnTimer: 0.6, overTimer: 0,
     held: null, flying: [], particles: [], texts: [],
   });
@@ -188,7 +202,7 @@ function startGame() {
 
 function endGame() {
   S.mode = 'over';
-  const isBest = S.score > S.best;
+  const isBest = !S.debugRun && S.score > S.best;
   if (isBest) {
     S.best = S.score;
     save('kinomi.best', String(S.best));
@@ -374,7 +388,8 @@ function drawSprite(s, x, y, k = 1, rot = 0, alpha = 1) {
 }
 
 function frame(list, offset = 0) {
-  return list[Math.floor(S.time * 5 + offset) % list.length];
+  const i = Math.floor(S.time * 5 + offset) % list.length;
+  return list[i < 0 ? i + list.length : i];
 }
 
 const easeOutBack = t => 1 + 2.7 * Math.pow(t - 1, 3) + 1.7 * Math.pow(t - 1, 2);
@@ -505,6 +520,14 @@ function drawHud() {
   ctx.strokeText(String(S.score), W / 2, 32);
   ctx.fillStyle = INK;
   ctx.fillText(String(S.score), W / 2, 32);
+  if (DEBUG) {
+    const text = `まてる ${basePatience(S.score).toFixed(2)}秒`;
+    ctx.font = `16px ${FONT}`;
+    ctx.lineWidth = 4;
+    ctx.strokeText(text, W / 2, 62);
+    ctx.fillStyle = '#c24a3a';
+    ctx.fillText(text, W / 2, 62);
+  }
   ctx.restore();
 }
 
@@ -581,7 +604,8 @@ function render() {
 
 let last = performance.now();
 function loop(now) {
-  const dt = Math.min(0.05, (now - last) / 1000);
+  // 最初のフレームは now が last より少し前になることがあるので、マイナスにしない
+  const dt = Math.max(0, Math.min(0.05, (now - last) / 1000));
   last = now;
   update(dt);
   render();
@@ -671,12 +695,13 @@ async function init() {
   resize();
   updateTitleBest();
   updateSoundBtn();
+  document.getElementById('debugStart').hidden = !DEBUG;
   show('title');
   document.body.classList.add('ready');
   requestAnimationFrame(loop);
 }
 
 // 動作確認用（URLに ?debug を付けたときだけ）
-if (location.search.includes('debug')) window.__kinomi = { S, L: () => L, SLOT_X, H: () => H };
+if (DEBUG) window.__kinomi = { S, L: () => L, SLOT_X, H: () => H };
 
 init();

@@ -188,3 +188,27 @@ body.ready #stage { opacity: 1; }
 @media (prefers-reduced-motion: reduce) {
   .new-best { animation: none; }
 }
+
+/* ---- デバッグ（URLに ?debug を付けたときだけ表示） ---- */
+.debug {
+  display: block;
+  margin: 0 0 calc(4 * var(--u));
+  font-size: calc(16 * var(--u));
+  color: #c24a3a;
+}
+
+.debug[hidden] { display: none; }
+
+.debug input {
+  width: 5em;
+  padding: 2px 6px;
+  font: inherit;
+  font-size: max(16px, 1em); /* 16px未満だとiPhoneで入力時に画面が拡大される */
+  text-align: center;
+  color: var(--ink);
+  background: #fff;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  -webkit-user-select: text;
+  user-select: text;
+}
